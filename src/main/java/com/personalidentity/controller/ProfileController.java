@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
 
-@CrossOrigin(origins = "https://personal-identity-nine.vercel.app/")
+@CrossOrigin(origins = "http://localhost:8080, https://personal-identity-nine.vercel.app/")
 @RestController
 @RequestMapping("/api/profiles")
 public class ProfileController {

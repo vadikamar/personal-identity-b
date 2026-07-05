@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 import java.util.logging.Logger;
 
-@CrossOrigin(origins = "https://personal-identity-nine.vercel.app")
+@CrossOrigin(origins = "http://localhost:8080, https://personal-identity-nine.vercel.app/")
 @RestController
 @RequestMapping("/api/analytics")
 public class AnalyticsController {
