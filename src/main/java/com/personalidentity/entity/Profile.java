@@ -9,6 +9,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -29,6 +30,8 @@ public class Profile {
     private boolean active;
     private List<String> interests;
     private List<LinkDTO> links;
+    @Builder.Default
+    private List<ProfilePost> posts = new ArrayList<>();
     private Instant createdAt;
     private Instant updatedAt;
 }

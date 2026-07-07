@@ -1,7 +1,9 @@
 package com.personalidentity.service;
 
+import com.personalidentity.dto.ProfilePostRequestDTO;
 import com.personalidentity.dto.ProfileRequestDTO;
 import com.personalidentity.entity.Profile;
+import com.personalidentity.entity.ProfilePost;
 import com.personalidentity.repositary.ProfileRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -85,6 +87,32 @@ public class ProfileService {
             profile.setUpdatedAt(Instant.now());
             return profileRepository.save(profile);
         });
+    }
+
+    public Optional<Profile> addPost(String id, ProfilePostRequestDTO request) {
+        return profileRepository.findById(id).map(profile -> {
+            if (profile.getPosts() == null) {
+                profile.setPosts(new java.util.ArrayList<>());
+            }
+            if (profile.getPosts().size() >= 5) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A profile can have at most 5 posts");
+            }
+
+            ProfilePost post = ProfilePost.builder()
+                    .id(java.util.UUID.randomUUID().toString())
+                    .description(request.getDescription())
+                    .photoUrl(request.getPhotoUrl())
+                    .createdAt(Instant.now())
+                    .build();
+
+            profile.getPosts().add(post);
+            profile.setUpdatedAt(Instant.now());
+            return profileRepository.save(profile);
+        });
+    }
+
+    public Optional<List<ProfilePost>> getPosts(String id) {
+        return profileRepository.findById(id).map(Profile::getPosts);
     }
 
     public Optional<Profile> activateProfile(String id) {

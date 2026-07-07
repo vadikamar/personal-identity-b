@@ -1,8 +1,10 @@
 package com.personalidentity.controller;
 
 import com.personalidentity.dto.ApiResponseDTO;
+import com.personalidentity.dto.ProfilePostRequestDTO;
 import com.personalidentity.dto.ProfileRequestDTO;
 import com.personalidentity.entity.Profile;
+import com.personalidentity.entity.ProfilePost;
 import com.personalidentity.service.ProfileService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -76,6 +78,22 @@ public class ProfileController {
         log.info("ProfileController uploadProfilePhoto");
         return profileService.uploadProfilePhoto(id, file)
                 .map(profile -> ResponseEntity.ok(new ApiResponseDTO<>(200, "Profile photo uploaded", UUID.randomUUID().toString(), profile)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/posts")
+    public ResponseEntity<ApiResponseDTO<Profile>> addPost(@PathVariable String id, @RequestBody ProfilePostRequestDTO request) {
+        log.info("ProfileController addPost");
+        return profileService.addPost(id, request)
+                .map(profile -> ResponseEntity.ok(new ApiResponseDTO<>(200, "Post created", UUID.randomUUID().toString(), profile)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/posts")
+    public ResponseEntity<ApiResponseDTO<List<ProfilePost>>> getPosts(@PathVariable String id) {
+        log.info("ProfileController getPosts");
+        return profileService.getPosts(id)
+                .map(posts -> ResponseEntity.ok(new ApiResponseDTO<>(200, "Posts fetched", UUID.randomUUID().toString(), posts)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
