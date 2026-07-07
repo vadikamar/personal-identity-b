@@ -115,6 +115,44 @@ public class ProfileService {
         return profileRepository.findById(id).map(Profile::getPosts);
     }
 
+    public Optional<ProfilePost> updatePost(String profileId, String postId, ProfilePostRequestDTO request) {
+        return profileRepository.findById(profileId).flatMap(profile -> {
+            if (profile.getPosts() == null) {
+                return Optional.empty();
+            }
+
+            return profile.getPosts().stream()
+                    .filter(post -> postId.equals(post.getId()))
+                    .findFirst()
+                    .map(post -> {
+                        post.setDescription(request.getDescription());
+                        post.setPhotoUrl(request.getPhotoUrl());
+                        profile.setUpdatedAt(Instant.now());
+                        profileRepository.save(profile);
+                        return post;
+                    });
+        });
+    }
+
+    public boolean deletePost(String profileId, String postId) {
+        Optional<Profile> profileOpt = profileRepository.findById(profileId);
+        if (profileOpt.isEmpty()) {
+            return false;
+        }
+
+        Profile profile = profileOpt.get();
+        if (profile.getPosts() == null) {
+            return false;
+        }
+
+        boolean removed = profile.getPosts().removeIf(post -> postId.equals(post.getId()));
+        if (removed) {
+            profile.setUpdatedAt(Instant.now());
+            profileRepository.save(profile);
+        }
+        return removed;
+    }
+
     public Optional<Profile> activateProfile(String id) {
         return profileRepository.findById(id).map(profile -> {
             profile.setActive(true);

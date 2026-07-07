@@ -97,6 +97,26 @@ public class ProfileController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PutMapping("/{id}/posts/{postId}")
+    public ResponseEntity<ApiResponseDTO<ProfilePost>> updatePost(@PathVariable String id,
+                                                                   @PathVariable String postId,
+                                                                   @RequestBody ProfilePostRequestDTO request) {
+        log.info("ProfileController updatePost");
+        return profileService.updatePost(id, postId, request)
+                .map(post -> ResponseEntity.ok(new ApiResponseDTO<>(200, "Post updated", UUID.randomUUID().toString(), post)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}/posts/{postId}")
+    public ResponseEntity<ApiResponseDTO<Void>> deletePost(@PathVariable String id, @PathVariable String postId) {
+        log.info("ProfileController deletePost");
+        boolean deleted = profileService.deletePost(id, postId);
+        if (!deleted) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(new ApiResponseDTO<>(200, "Post deleted", UUID.randomUUID().toString(), null));
+    }
+
     @PostMapping("/{id}/activate")
     public ResponseEntity<ApiResponseDTO<Profile>> activateProfile(@PathVariable String id) {
         log.info("ProfileController activateProfile");
