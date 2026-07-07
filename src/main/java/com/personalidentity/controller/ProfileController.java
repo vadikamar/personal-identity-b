@@ -4,8 +4,10 @@ import com.personalidentity.dto.ApiResponseDTO;
 import com.personalidentity.dto.ProfileRequestDTO;
 import com.personalidentity.entity.Profile;
 import com.personalidentity.service.ProfileService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -66,6 +68,15 @@ public class ProfileController {
         profileService.deleteProfile(id);
         log.info("ProfileController deleteProfile deleted");
         return ResponseEntity.ok(new ApiResponseDTO<>(200, "Profile deleted", UUID.randomUUID().toString(), null));
+    }
+
+    @PostMapping(value = "/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponseDTO<Profile>> uploadProfilePhoto(@PathVariable String id,
+                                                                      @RequestParam("file") MultipartFile file) {
+        log.info("ProfileController uploadProfilePhoto");
+        return profileService.uploadProfilePhoto(id, file)
+                .map(profile -> ResponseEntity.ok(new ApiResponseDTO<>(200, "Profile photo uploaded", UUID.randomUUID().toString(), profile)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/{id}/activate")

@@ -5,6 +5,7 @@ import com.personalidentity.entity.Profile;
 import com.personalidentity.repositary.ProfileRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -15,9 +16,11 @@ import java.util.Optional;
 @Service
 public class ProfileService {
     private final ProfileRepository profileRepository;
+    private final CloudinaryService cloudinaryService;
 
-    public ProfileService(ProfileRepository profileRepository) {
+    public ProfileService(ProfileRepository profileRepository, CloudinaryService cloudinaryService) {
         this.profileRepository = profileRepository;
+        this.cloudinaryService = cloudinaryService;
     }
 
     public List<Profile> getAllProfiles() {
@@ -40,6 +43,7 @@ public class ProfileService {
                 .headline(request.getHeadline())
                 .bio(request.getBio())
                 .theme(request.getTheme())
+                .photoUrl(request.getPhotoUrl())
                 .active(request.isActive())
                 .interests(request.getInterests())
                 .links(request.getLinks())
@@ -56,6 +60,7 @@ public class ProfileService {
             existing.setHeadline(request.getHeadline());
             existing.setBio(request.getBio());
             existing.setTheme(request.getTheme());
+            existing.setPhotoUrl(request.getPhotoUrl());
             existing.setActive(request.isActive());
             existing.setInterests(request.getInterests());
             existing.setLinks(request.getLinks());
@@ -71,6 +76,15 @@ public class ProfileService {
         else{
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
+    }
+
+    public Optional<Profile> uploadProfilePhoto(String id, MultipartFile file) {
+        return profileRepository.findById(id).map(profile -> {
+            String photoUrl = cloudinaryService.uploadImage(file);
+            profile.setPhotoUrl(photoUrl);
+            profile.setUpdatedAt(Instant.now());
+            return profileRepository.save(profile);
+        });
     }
 
     public Optional<Profile> activateProfile(String id) {

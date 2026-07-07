@@ -18,6 +18,7 @@ public class ProfileRequestDTO {
     private String userName;//can't be updated once created
     private String bio;
     private String theme;
+    private String photoUrl;
     private boolean active;
     private List<String> interests;
     private List<LinkDTO> links;

@@ -25,6 +25,7 @@ public class Profile {
     private String headline;
     private String bio;
     private String theme;
+    private String photoUrl;
     private boolean active;
     private List<String> interests;
     private List<LinkDTO> links;
