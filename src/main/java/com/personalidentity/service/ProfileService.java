@@ -264,6 +264,12 @@ public class ProfileService {
             if (!Objects.equals(request.getOwnerUsername(), currentOwnerUsername)) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to approve this request");
             }
+            Optional<ProfileAccessRequest> accessRequest = profileAccessRequestRepository.findByOwnerUsernameAndRequesterUsernameAndStatus(
+                    request.getOwnerUsername(), request.getRequesterUsername(), "APPROVED");
+            if (accessRequest.isPresent()) {
+                accessRequest.get().setStatus("REJECTED");
+                profileAccessRequestRepository.save(accessRequest.get());
+            }
             request.setStatus("APPROVED");
             request.setUpdatedAt(Instant.now());
             profileAccessRequestRepository.save(request);
@@ -294,7 +300,7 @@ public class ProfileService {
     }
 
     public String[] canUserAccessProfile(String username, String requesterUsername) {
-        Optional<ProfileAccessRequest> profileOpt = profileAccessRequestRepository.findByOwnerUsernameAndRequesterUsername(username, requesterUsername);
+        Optional<ProfileAccessRequest> profileOpt = profileAccessRequestRepository.findByOwnerUsernameAndRequesterUsernameAndStatus(username, requesterUsername, "APPROVED");
         if (profileOpt.isEmpty()) {
             return new String[]{"0", null};
         }
