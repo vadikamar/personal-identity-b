@@ -12,6 +12,7 @@ import com.personalidentity.entity.VisitorLocation;
 import com.personalidentity.service.ProfileService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -160,8 +161,11 @@ public class ProfileController {
     public ResponseEntity<ApiResponseDTO<ProfileAccessRequest>> requestProfileAccess(@PathVariable String ownerProfileId,
                                                                                    @RequestBody ProfileAccessRequestDTO request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String requesterUsername = authentication != null ? authentication.getName() : null;
-        if (requesterUsername == null || requesterUsername.isBlank()) {
+        boolean isAuthenticated = authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken);
+        String requesterUsername = isAuthenticated ? authentication.getName() : null;
+        if (!isAuthenticated || requesterUsername == null || requesterUsername.isBlank()) {
             return ResponseEntity.status(401).body(new ApiResponseDTO<>(401, "Authentication required", UUID.randomUUID().toString(), null));
         }
         ProfileAccessRequest created = profileService.requestProfileAccess(ownerProfileId, requesterUsername, request);
@@ -171,8 +175,11 @@ public class ProfileController {
     @GetMapping("/dashboard/access-requests")
     public ResponseEntity<ApiResponseDTO<List<ProfileAccessRequest>>> getPendingAccessRequests() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String currentUsername = authentication != null ? authentication.getName() : null;
-        if (currentUsername == null || currentUsername.isBlank()) {
+        boolean isAuthenticated = authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken);
+        String currentUsername = isAuthenticated ? authentication.getName() : null;
+        if (!isAuthenticated || currentUsername == null || currentUsername.isBlank()) {
             return ResponseEntity.status(401).body(new ApiResponseDTO<>(401, "Authentication required", UUID.randomUUID().toString(), null));
         }
         List<ProfileAccessRequest> requests = profileService.getPendingRequestsForOwner(currentUsername);
@@ -182,8 +189,11 @@ public class ProfileController {
     @PostMapping("/access-requests/{requestId}/approve")
     public ResponseEntity<ApiResponseDTO<ProfileAccessRequest>> approveAccessRequest(@PathVariable String requestId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String currentUsername = authentication != null ? authentication.getName() : null;
-        if (currentUsername == null || currentUsername.isBlank()) {
+        boolean isAuthenticated = authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken);
+        String currentUsername = isAuthenticated ? authentication.getName() : null;
+        if (!isAuthenticated || currentUsername == null || currentUsername.isBlank()) {
             return ResponseEntity.status(401).body(new ApiResponseDTO<>(401, "Authentication required", UUID.randomUUID().toString(), null));
         }
         return profileService.approveAccessRequest(requestId, currentUsername)
@@ -194,8 +204,11 @@ public class ProfileController {
     @PostMapping("/access-requests/{requestId}/reject")
     public ResponseEntity<ApiResponseDTO<ProfileAccessRequest>> rejectAccessRequest(@PathVariable String requestId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String currentUsername = authentication != null ? authentication.getName() : null;
-        if (currentUsername == null || currentUsername.isBlank()) {
+        boolean isAuthenticated = authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken);
+        String currentUsername = isAuthenticated ? authentication.getName() : null;
+        if (!isAuthenticated || currentUsername == null || currentUsername.isBlank()) {
             return ResponseEntity.status(401).body(new ApiResponseDTO<>(401, "Authentication required", UUID.randomUUID().toString(), null));
         }
         return profileService.rejectAccessRequest(requestId, currentUsername)
@@ -206,8 +219,11 @@ public class ProfileController {
     @GetMapping("/{username}/view")
     public ResponseEntity<ApiResponseDTO<Profile>> viewProfileIfAuthorized(@PathVariable String username) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String currentUsername = authentication != null ? authentication.getName() : null;
-        if (currentUsername == null || currentUsername.isBlank()) {
+        boolean isAuthenticated = authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken);
+        String currentUsername = isAuthenticated ? authentication.getName() : null;
+        if (!isAuthenticated || currentUsername == null || currentUsername.isBlank()) {
             return ResponseEntity.status(401).body(new ApiResponseDTO<>(401, "Authentication required", UUID.randomUUID().toString(), null));
         }
         boolean canAccess = profileService.canUserAccessProfile(username, currentUsername);
