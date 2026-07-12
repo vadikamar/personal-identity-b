@@ -31,6 +31,8 @@ public class Profile {
     private List<String> interests;
     private List<LinkDTO> links;
     @Builder.Default
+    private List<String> authorizedViewerUsernames = new ArrayList<>();
+    @Builder.Default
     private List<ProfilePost> posts = new ArrayList<>();
     @Builder.Default
     private List<VisitorLocation> visitorLocations = new ArrayList<>();

@@ -1,15 +1,19 @@
 package com.personalidentity.controller;
 
 import com.personalidentity.dto.ApiResponseDTO;
+import com.personalidentity.dto.ProfileAccessRequestDTO;
 import com.personalidentity.dto.ProfilePostRequestDTO;
 import com.personalidentity.dto.ProfileRequestDTO;
 import com.personalidentity.dto.VisitorLocationRequestDTO;
 import com.personalidentity.entity.Profile;
+import com.personalidentity.entity.ProfileAccessRequest;
 import com.personalidentity.entity.ProfilePost;
 import com.personalidentity.entity.VisitorLocation;
 import com.personalidentity.service.ProfileService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -149,6 +153,69 @@ public class ProfileController {
         log.info("ProfileController getVisitorLocations");
         return profileService.getVisitorLocations(username)
                 .map(locations -> ResponseEntity.ok(new ApiResponseDTO<>(200, "Visitor locations fetched", UUID.randomUUID().toString(), locations)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{ownerProfileId}/access-requests")
+    public ResponseEntity<ApiResponseDTO<ProfileAccessRequest>> requestProfileAccess(@PathVariable String ownerProfileId,
+                                                                                   @RequestBody ProfileAccessRequestDTO request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String requesterUsername = authentication != null ? authentication.getName() : null;
+        if (requesterUsername == null || requesterUsername.isBlank()) {
+            return ResponseEntity.status(401).body(new ApiResponseDTO<>(401, "Authentication required", UUID.randomUUID().toString(), null));
+        }
+        ProfileAccessRequest created = profileService.requestProfileAccess(ownerProfileId, requesterUsername, request);
+        return ResponseEntity.ok(new ApiResponseDTO<>(200, "Access request created", UUID.randomUUID().toString(), created));
+    }
+
+    @GetMapping("/dashboard/access-requests")
+    public ResponseEntity<ApiResponseDTO<List<ProfileAccessRequest>>> getPendingAccessRequests() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication != null ? authentication.getName() : null;
+        if (currentUsername == null || currentUsername.isBlank()) {
+            return ResponseEntity.status(401).body(new ApiResponseDTO<>(401, "Authentication required", UUID.randomUUID().toString(), null));
+        }
+        List<ProfileAccessRequest> requests = profileService.getPendingRequestsForOwner(currentUsername);
+        return ResponseEntity.ok(new ApiResponseDTO<>(200, "Access requests fetched", UUID.randomUUID().toString(), requests));
+    }
+
+    @PostMapping("/access-requests/{requestId}/approve")
+    public ResponseEntity<ApiResponseDTO<ProfileAccessRequest>> approveAccessRequest(@PathVariable String requestId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication != null ? authentication.getName() : null;
+        if (currentUsername == null || currentUsername.isBlank()) {
+            return ResponseEntity.status(401).body(new ApiResponseDTO<>(401, "Authentication required", UUID.randomUUID().toString(), null));
+        }
+        return profileService.approveAccessRequest(requestId, currentUsername)
+                .map(request -> ResponseEntity.ok(new ApiResponseDTO<>(200, "Access request approved", UUID.randomUUID().toString(), request)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/access-requests/{requestId}/reject")
+    public ResponseEntity<ApiResponseDTO<ProfileAccessRequest>> rejectAccessRequest(@PathVariable String requestId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication != null ? authentication.getName() : null;
+        if (currentUsername == null || currentUsername.isBlank()) {
+            return ResponseEntity.status(401).body(new ApiResponseDTO<>(401, "Authentication required", UUID.randomUUID().toString(), null));
+        }
+        return profileService.rejectAccessRequest(requestId, currentUsername)
+                .map(request -> ResponseEntity.ok(new ApiResponseDTO<>(200, "Access request rejected", UUID.randomUUID().toString(), request)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{username}/view")
+    public ResponseEntity<ApiResponseDTO<Profile>> viewProfileIfAuthorized(@PathVariable String username) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication != null ? authentication.getName() : null;
+        if (currentUsername == null || currentUsername.isBlank()) {
+            return ResponseEntity.status(401).body(new ApiResponseDTO<>(401, "Authentication required", UUID.randomUUID().toString(), null));
+        }
+        boolean canAccess = profileService.canUserAccessProfile(username, currentUsername);
+        if (!canAccess) {
+            return ResponseEntity.status(403).body(new ApiResponseDTO<>(403, "Access denied", UUID.randomUUID().toString(), null));
+        }
+        return profileService.getProfileByUsername(username)
+                .map(profile -> ResponseEntity.ok(new ApiResponseDTO<>(200, "Profile fetched", UUID.randomUUID().toString(), profile)))
                 .orElse(ResponseEntity.notFound().build());
     }
 }

@@ -1,18 +1,23 @@
 package com.personalidentity.service;
 
+import com.personalidentity.dto.ProfileAccessRequestDTO;
 import com.personalidentity.dto.ProfilePostRequestDTO;
 import com.personalidentity.dto.ProfileRequestDTO;
 import com.personalidentity.dto.VisitorLocationRequestDTO;
 import com.personalidentity.entity.Profile;
+import com.personalidentity.entity.ProfileAccessRequest;
 import com.personalidentity.entity.ProfilePost;
 import com.personalidentity.entity.VisitorLocation;
+import com.personalidentity.repositary.ProfileAccessRequestRepository;
 import com.personalidentity.repositary.ProfileRepository;
+import com.personalidentity.repositary.UserAccountRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -22,10 +27,17 @@ import java.util.UUID;
 public class ProfileService {
     private final ProfileRepository profileRepository;
     private final CloudinaryService cloudinaryService;
+    private final ProfileAccessRequestRepository profileAccessRequestRepository;
+    private final UserAccountRepository userAccountRepository;
 
-    public ProfileService(ProfileRepository profileRepository, CloudinaryService cloudinaryService) {
+    public ProfileService(ProfileRepository profileRepository,
+                          CloudinaryService cloudinaryService,
+                          ProfileAccessRequestRepository profileAccessRequestRepository,
+                          UserAccountRepository userAccountRepository) {
         this.profileRepository = profileRepository;
         this.cloudinaryService = cloudinaryService;
+        this.profileAccessRequestRepository = profileAccessRequestRepository;
+        this.userAccountRepository = userAccountRepository;
     }
 
     public List<Profile> getAllProfiles() {
@@ -207,4 +219,86 @@ public class ProfileService {
                 .filter(profile -> "SOS".equalsIgnoreCase(profile.getProfileType()))
                 .map(profile -> Optional.ofNullable(profile.getVisitorLocations()).orElseGet(java.util.ArrayList::new));
     }
+
+    public ProfileAccessRequest requestProfileAccess(String ownerProfileId, String requesterUsername, ProfileAccessRequestDTO request) {
+        Profile ownerProfile = profileRepository.findById(ownerProfileId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found"));
+
+        if (ownerProfile.getAuthorizedViewerUsernames() != null && ownerProfile.getAuthorizedViewerUsernames().contains(requesterUsername)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User already has access");
+        }
+
+        Optional<ProfileAccessRequest> existingRequest = profileAccessRequestRepository.findByOwnerUsernameAndRequesterUsernameAndRequestedProfileIdAndStatus(
+                ownerProfile.getUserName(), requesterUsername, request.getRequestedProfileId(), "PENDING");
+        if (existingRequest.isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A pending request already exists");
+        }
+
+        ProfileAccessRequest accessRequest = ProfileAccessRequest.builder()
+                .ownerProfileId(ownerProfileId)
+                .ownerUsername(ownerProfile.getUserName())
+                .requesterUsername(requesterUsername)
+                .requestedProfileId(request.getRequestedProfileId())
+                .message(request.getMessage())
+                .status("PENDING")
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
+
+        return profileAccessRequestRepository.save(accessRequest);
+    }
+
+    public List<ProfileAccessRequest> getPendingRequestsForOwner(String ownerUsername) {
+        return profileAccessRequestRepository.findByOwnerUsernameAndStatus(ownerUsername, "PENDING");
+    }
+
+    public Optional<ProfileAccessRequest> approveAccessRequest(String requestId, String currentOwnerUsername) {
+        return profileAccessRequestRepository.findById(requestId).map(request -> {
+            if (!Objects.equals(request.getOwnerUsername(), currentOwnerUsername)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to approve this request");
+            }
+            request.setStatus("APPROVED");
+            request.setUpdatedAt(Instant.now());
+            profileAccessRequestRepository.save(request);
+
+            profileRepository.findById(request.getOwnerProfileId()).ifPresent(profile -> {
+                if (profile.getAuthorizedViewerUsernames() == null) {
+                    profile.setAuthorizedViewerUsernames(new ArrayList<>());
+                }
+                if (!profile.getAuthorizedViewerUsernames().contains(request.getRequesterUsername())) {
+                    profile.getAuthorizedViewerUsernames().add(request.getRequesterUsername());
+                    profile.setUpdatedAt(Instant.now());
+                    profileRepository.save(profile);
+                }
+            });
+            return request;
+        });
+    }
+
+    public Optional<ProfileAccessRequest> rejectAccessRequest(String requestId, String currentOwnerUsername) {
+        return profileAccessRequestRepository.findById(requestId).map(request -> {
+            if (!Objects.equals(request.getOwnerUsername(), currentOwnerUsername)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not authorized to reject this request");
+            }
+            request.setStatus("REJECTED");
+            request.setUpdatedAt(Instant.now());
+            return profileAccessRequestRepository.save(request);
+        });
+    }
+
+    public boolean canUserAccessProfile(String username, String requesterUsername) {
+        Optional<Profile> profileOpt = profileRepository.findByUserNameAndActiveTrue(username);
+        if (profileOpt.isEmpty()) {
+            return false;
+        }
+        Profile profile = profileOpt.get();
+        if (Objects.equals(profile.getUserName(), requesterUsername)) {
+            return true;
+        }
+        if (profile.getAuthorizedViewerUsernames() == null) {
+            return false;
+        }
+        return profile.getAuthorizedViewerUsernames().contains(requesterUsername);
+    }
 }
+
