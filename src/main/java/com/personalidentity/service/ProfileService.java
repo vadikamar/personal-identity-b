@@ -269,6 +269,10 @@ public class ProfileService {
             if (accessRequest.isPresent()) {
                 accessRequest.get().setStatus("REJECTED");
                 profileAccessRequestRepository.save(accessRequest.get());
+                Optional<Profile> profile = profileRepository.findById(accessRequest.get().getRequestedProfileId());
+                profile.ifPresent(value -> value.setAuthorizedViewerUsernames(value.getAuthorizedViewerUsernames().stream()
+                        .filter(username -> !username.equals(accessRequest.get().getRequesterUsername()))
+                        .toList()));
             }
             request.setStatus("APPROVED");
             request.setUpdatedAt(Instant.now());
