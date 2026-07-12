@@ -3,8 +3,10 @@ package com.personalidentity.controller;
 import com.personalidentity.dto.ApiResponseDTO;
 import com.personalidentity.dto.ProfilePostRequestDTO;
 import com.personalidentity.dto.ProfileRequestDTO;
+import com.personalidentity.dto.VisitorLocationRequestDTO;
 import com.personalidentity.entity.Profile;
 import com.personalidentity.entity.ProfilePost;
+import com.personalidentity.entity.VisitorLocation;
 import com.personalidentity.service.ProfileService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -130,6 +132,23 @@ public class ProfileController {
         log.info("ProfileController deactivateProfile");
         return profileService.deactivateProfile(id)
                 .map(profile -> ResponseEntity.ok(new ApiResponseDTO<>(200, "Profile deactivated", UUID.randomUUID().toString(), profile)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{username}/visitor-location")
+    public ResponseEntity<ApiResponseDTO<Profile>> recordVisitorLocation(@PathVariable String username,
+                                                                        @RequestBody VisitorLocationRequestDTO request) {
+        log.info("ProfileController recordVisitorLocation");
+        return profileService.recordVisitorLocation(username, request)
+                .map(profile -> ResponseEntity.ok(new ApiResponseDTO<>(200, "Visitor location recorded", UUID.randomUUID().toString(), profile)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{username}/visitor-locations")
+    public ResponseEntity<ApiResponseDTO<List<VisitorLocation>>> getVisitorLocations(@PathVariable String username) {
+        log.info("ProfileController getVisitorLocations");
+        return profileService.getVisitorLocations(username)
+                .map(locations -> ResponseEntity.ok(new ApiResponseDTO<>(200, "Visitor locations fetched", UUID.randomUUID().toString(), locations)))
                 .orElse(ResponseEntity.notFound().build());
     }
 }

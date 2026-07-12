@@ -32,6 +32,8 @@ public class Profile {
     private List<LinkDTO> links;
     @Builder.Default
     private List<ProfilePost> posts = new ArrayList<>();
+    @Builder.Default
+    private List<VisitorLocation> visitorLocations = new ArrayList<>();
     private Instant createdAt;
     private Instant updatedAt;
 }

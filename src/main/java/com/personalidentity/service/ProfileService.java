@@ -2,8 +2,10 @@ package com.personalidentity.service;
 
 import com.personalidentity.dto.ProfilePostRequestDTO;
 import com.personalidentity.dto.ProfileRequestDTO;
+import com.personalidentity.dto.VisitorLocationRequestDTO;
 import com.personalidentity.entity.Profile;
 import com.personalidentity.entity.ProfilePost;
+import com.personalidentity.entity.VisitorLocation;
 import com.personalidentity.repositary.ProfileRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class ProfileService {
@@ -175,5 +178,33 @@ public class ProfileService {
             profile.setUpdatedAt(Instant.now());
             return profileRepository.save(profile);
         });
+    }
+
+    public Optional<Profile> recordVisitorLocation(String username, VisitorLocationRequestDTO request) {
+        return profileRepository.findByUserNameAndActiveTrue(username)
+                .filter(profile -> "SOS".equalsIgnoreCase(profile.getProfileType()))
+                .map(profile -> {
+                    if (profile.getVisitorLocations() == null) {
+                        profile.setVisitorLocations(new java.util.ArrayList<>());
+                    }
+                    VisitorLocation visitorLocation = VisitorLocation.builder()
+                            .id(UUID.randomUUID().toString())
+                            .latitude(request.getLatitude())
+                            .longitude(request.getLongitude())
+                            .city(request.getCity())
+                            .country(request.getCountry())
+                            .address(request.getAddress())
+                            .visitedAt(Instant.now())
+                            .build();
+                    profile.getVisitorLocations().add(visitorLocation);
+                    profile.setUpdatedAt(Instant.now());
+                    return profileRepository.save(profile);
+                });
+    }
+
+    public Optional<List<VisitorLocation>> getVisitorLocations(String username) {
+        return profileRepository.findByUserNameAndActiveTrue(username)
+                .filter(profile -> "SOS".equalsIgnoreCase(profile.getProfileType()))
+                .map(profile -> Optional.ofNullable(profile.getVisitorLocations()).orElseGet(java.util.ArrayList::new));
     }
 }
