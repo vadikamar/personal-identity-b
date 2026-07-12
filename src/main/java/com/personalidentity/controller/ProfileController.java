@@ -226,11 +226,11 @@ public class ProfileController {
         if (!isAuthenticated || currentUsername == null || currentUsername.isBlank()) {
             return ResponseEntity.status(401).body(new ApiResponseDTO<>(401, "Authentication required", UUID.randomUUID().toString(), null));
         }
-        boolean canAccess = profileService.canUserAccessProfile(username, currentUsername);
-        if (!canAccess) {
+        String[] canAccess = profileService.canUserAccessProfile(username, currentUsername);
+        if (canAccess[0].equals("0")) {
             return ResponseEntity.status(403).body(new ApiResponseDTO<>(403, "Access denied", UUID.randomUUID().toString(), null));
         }
-        return profileService.getProfileByUsername(username)
+        return profileService.getProfileById(canAccess[1])
                 .map(profile -> ResponseEntity.ok(new ApiResponseDTO<>(200, "Profile fetched", UUID.randomUUID().toString(), profile)))
                 .orElse(ResponseEntity.notFound().build());
     }

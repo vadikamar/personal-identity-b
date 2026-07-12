@@ -14,4 +14,5 @@ public interface ProfileAccessRequestRepository extends MongoRepository<ProfileA
             String requesterUsername,
             String requestedProfileId,
             String status);
+    Optional<ProfileAccessRequest> findByOwnerUsernameAndRequesterUsername(String ownerUsername, String requesterUsername);
 }

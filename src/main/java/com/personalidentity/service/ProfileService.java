@@ -47,6 +47,13 @@ public class ProfileService {
     public Optional<Profile> getProfileByUsername(String username) {
         return profileRepository.findByUserNameAndActiveTrue(username);
     }
+    public Optional<Profile> getProfileById(String id) {
+        return profileRepository.findById(id);
+    }
+
+    public Optional<Profile> getProfileByUsername(String username, String loggedUser) {
+        return profileRepository.findByUserNameAndActiveTrue(username);
+    }
 
     public Optional<Profile> getActiveProfile() {
         return profileRepository.findFirstByActiveTrue();
@@ -286,19 +293,23 @@ public class ProfileService {
         });
     }
 
-    public boolean canUserAccessProfile(String username, String requesterUsername) {
-        Optional<Profile> profileOpt = profileRepository.findByUserNameAndActiveTrue(username);
+    public String[] canUserAccessProfile(String username, String requesterUsername) {
+        Optional<ProfileAccessRequest> profileOpt = profileAccessRequestRepository.findByOwnerUsernameAndRequesterUsername(username, requesterUsername);
         if (profileOpt.isEmpty()) {
-            return false;
+            return new String[]{"0", null};
         }
-        Profile profile = profileOpt.get();
-        if (Objects.equals(profile.getUserName(), requesterUsername)) {
-            return true;
+        ProfileAccessRequest profileAccessRequest = profileOpt.get();
+        Optional<Profile> profile = profileRepository.findById(profileAccessRequest.getRequestedProfileId());
+        if (profile.isEmpty()) {
+            return new String[]{"0", null};
         }
-        if (profile.getAuthorizedViewerUsernames() == null) {
-            return false;
+        if (Objects.equals(profile.get().getUserName(), requesterUsername)) {
+            return new String[]{"1", profile.get().getId()};
         }
-        return profile.getAuthorizedViewerUsernames().contains(requesterUsername);
+        if (profile.get().getAuthorizedViewerUsernames() == null) {
+            return new String[]{"0", profile.get().getId()};
+        }
+        return new String[]{profile.get().getAuthorizedViewerUsernames().contains(requesterUsername)?"1":"0", profile.get().getId()};
     }
 }
 
